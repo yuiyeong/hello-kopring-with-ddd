@@ -19,11 +19,15 @@ class OrderLine(productId: ProductId, price: Money, quantity: Int) {
         private set
 
     @Convert(converter = MoneyConverter::class)
-    var amounts: Money = Money(0)
+    var amounts: Money
         private set
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_number")
     lateinit var order: Order
         private set
+
+    init {
+        amounts = price.multiply(quantity)
+    }
 }

@@ -25,7 +25,11 @@ class Order(
     @CollectionTable(name = "order_line", joinColumns = [JoinColumn(name = "order_number")])
     @OrderColumn(name = "line_idx")
     var orderLines: MutableList<OrderLine> = orderLines
-        private set
+        private set(value) {
+            verifyAtLeastOneOrderLines(value)
+            field = value
+            calculateTotalAmounts()
+        }
 
     @Embedded
     var shippingInfo: ShippingInfo = shippingInfo
@@ -44,4 +48,32 @@ class Order(
 
     @Version
     private var version: Long = 0
+
+    private fun verifyAtLeastOneOrderLines(orderLines: List<OrderLine>) {
+        if (orderLines.isEmpty())
+            throw IllegalArgumentException("There is no orderline.")
+    }
+
+    private fun calculateTotalAmounts() {
+        totalAmounts = Money(
+            orderLines.sumOf { orderLine -> orderLine.amounts.value }
+        )
+    }
+
+    fun changeShippingInfo(info: ShippingInfo) {
+        verifyNotYetShipped()
+        shippingInfo = info
+    }
+
+    fun cancel() {
+        verifyNotYetShipped()
+        state = OrderState.CANCELED
+    }
+
+    private fun verifyNotYetShipped() {
+        if (!isNotYetShipped())
+            throw IllegalStateException("Already Shipped")
+    }
+
+    fun isNotYetShipped(): Boolean = state == OrderState.PAYMENT_WAITING || state == OrderState.PREPARING
 }
